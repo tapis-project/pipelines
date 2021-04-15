@@ -1,0 +1,10 @@
+{
+  "files": [
+    {
+      "file_path": "/foo/bar/input_1.txt"
+    },
+    {
+      "file_path": "/foo/bar/input_2.txt"
+    }
+  ]
+}

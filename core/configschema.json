@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$id": "http://github.com/tapis-project/tapis-pipelines/core/configschema.json",
+  "type": "object",
+  "required": [
+    "remote_inbox",
+    "remote_outbox",
+    "pipeline_job"
+  ],
+
+  "properties": {
+    "remote_inbox": {
+      "$ref": "#/definitions/remote_box_definition"
+    },
+
+    "remote_outbox": {
+      "$ref": "#/definitions/remote_box_definition"
+    },
+
+    "pipeline_job": {
+      "$ref": "#/definitions/pipeline_job_definition"
+    },
+    "tapis_config": {
+      "$ref": "#/definitions/tapis_config_definition"
+    }
+
+  },
+
+  "definitions": {
+    "remote_box_definition": {
+      "description": "Configuration of remote inbox or outbox",
+      "type": "object",
+      "required": [
+        "kind",
+        "box_definition"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "tapis",
+            "globus"
+          ],
+          "description": "The type of Remote Box being configured."
+        },
+        "box_definition": {
+          "$ref": "#/definitions/box_definition"
+        }
+      }
+    },
+    "box_definition": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/tapis_box_definition"
+        },
+        {
+          "$ref": "#/definitions/globus_box_definition"
+        }
+      ]
+    },
+    "tapis_box_definition": {
+      "description": "A pipeline box defined using a Tapis system and path.",
+      "type": "object",
+      "required": [
+        "system_id",
+        "path"
+      ],
+      "properties": {
+        "system_id": {
+          "type": "string",
+          "description": "The id of the Tapis system to use for the box definition."
+        },
+        "path": {
+          "type": "string",
+          "description": "Path on the Tapis system to use for the box definition."
+        }
+      }
+    },
+    "globus_box_definition": {
+      "description": "A pipeline box defined using a Globus endpoint.",
+      "type": "object",
+      "required": [
+        "client_id",
+        "endpoint_name",
+        "directory"
+      ],
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "description": "The id of the Globus client to use when issuing transfers."
+        },
+        "endpoint_name": {
+          "type": "string",
+          "description": "The name of the Globus endpoint."
+        },
+        "directory": {
+          "type": "string",
+          "description": "The directory within the Globus endpoint to use for the box definition."
+        }
+      }
+    },
+    "pipeline_job_definition": {
+      "description": "Description of the pipeline job to run on new input files.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/tapis_app_job"
+        },
+        {
+          "$ref": "#/definitions/tapis_actor_job"
+        },
+        {
+          "#ref": "#/definitions/local_script_job"
+        }
+      ]
+    },
+    "tapis_app_job": {
+      "description": "A Pipeline job described using a Tapis app",
+      "type": "object",
+      "required": [
+        "app_id",
+        "manifest_input_name"
+      ],
+      "properties": {
+        "app_id": {
+          "type": "string",
+          "description": "The app id to use when submitting the job,"
+        },
+        "manifest_input_name": {
+          "type": "string",
+          "description": "The name of the input on the Tapis app for the manifest file.",
+          "default": "manifest_file"
+        },
+        "raw_files_input_name": {
+          "type": "string",
+          "description": "The name of the input on the Tapis app to be used for sending the raw input files. If empty, no input name will be specified.",
+          "default": ""
+        }
+      }
+    },
+    "tapis_actor_job": {
+      "description": "A Pipeline job described using a Tapis actor",
+      "type": "object",
+      "required": [
+        "actor_id"
+      ],
+      "properties": {
+        "actor_id": {
+          "description": "The id of the actor. The Tapis Pipelines software will send a JSON message to the actor with details about the job (see documentation).",
+          "type": "string"
+        }
+      }
+    },
+    "local_script_job": {
+      "description": "A Pipeline job described using a local script",
+      "type": "object"
+    },
+    "tapis_config_definition": {
+      "description": "General configuration for Tapis usage.",
+      "type": "object",
+      "required": [
+        "base_url",
+        "username"
+      ],
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "description": "The base URL for the Tapis tenant to interact with."
+        },
+        "username": {
+          "type": "string",
+          "description": "The Tapis username to use when accessing Tapis services."
+        }
+      }
+    }
+  }
+}
