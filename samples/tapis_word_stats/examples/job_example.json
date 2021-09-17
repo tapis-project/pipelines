@@ -1,0 +1,22 @@
+{
+  "name": "test word stats pipeline CLI",
+  "appId": "word_stats.pipelines.example.app",
+  "appVersion":"0.0.1",
+  "fileInputs": [
+    {
+      "sourceUrl": "tapis://word_stats.pipelines.example.outbox/manifest.json",
+      "meta": {
+        "name": "manifest",
+        "required": true
+      }
+    },
+    {
+      "sourceUrl": "tapis://word_stats.pipelines.example.outbox/test1.txt",
+      "targetPath": "test1.txt"
+    },
+    {
+      "sourceUrl": "tapis://word_stats.pipelines.example.outbox/test2.txt",
+      "targetPath": "test2.txt"
+    }
+  ]
+}

@@ -3,17 +3,12 @@
   "$id": "http://github.com/tapis-project/tapis-pipelines/core/configschema.json",
   "type": "object",
   "required": [
-    "pipeline_name",
     "remote_inbox",
     "remote_outbox",
     "pipeline_job"
   ],
 
   "properties": {
-    "pipeline_name": {
-      "type": "string",
-      "description": "A name for this pipeline; the name is used to namespace various objects used internally for the pipeline execution, such as the database collection name."
-    },
     "remote_inbox": {
       "$ref": "#/definitions/remote_box_definition"
     },
@@ -174,14 +169,6 @@
         "username": {
           "type": "string",
           "description": "The Tapis username to use when accessing Tapis services."
-        },
-        "password": {
-          "type": "string",
-            "description": "The password associated with the Tapis username. Using an access_token is preferred."
-        },
-        "access_token": {
-          "type": "string",
-          "description": "An access token associated with the Tapis username. If no token is provided, the pipelines software look in the environment for an access token. First looks for a variable named TAPIS_PIPELINES_ACCESS_TOKEN and then for _abaco_access_token in case the pipelines software is running as an Abaco actor."
         }
       }
     }

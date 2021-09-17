@@ -1,0 +1,29 @@
+{
+  "pipeline_name": "word_stats.pipelines.example",
+  "remote_inbox": {
+    "kind": "tapis",
+    "box_definition": {
+      "system_id": "word_stats.pipelines.example.remote.inbox",
+      "path": "/"
+    }
+  },
+  "remote_outbox": {
+    "kind": "tapis",
+    "box_definition": {
+      "system_id": "word_stats.pipelines.example.outbox",
+      "path": "/"
+    }
+  },
+  "pipeline_job": {
+    "tapis_app_job": {
+      "app_id": "word_stats.pipelines.example.app",
+      "manifest_input_name": "manifest"
+    }
+
+  },
+  "tapis_config": {
+    "base_url": "https://tacc.tapis.io",
+    "username": "jstubbs",
+    "access_token": "TODO"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$id": "http://github.com/tapis-project/tapis-pipelines/core/manifest_schema.json",
+  "type": "object",
+  "description": "A schema describing a valid Tapis Pipelines manifest file.",
+  "required": [
+     "files"
+  ],
+  "properties": {
+    "files": {
+      "$ref": "#/definitions/files_list"
+    },
+    "job_config": {
+      "$ref": "#/definitions/job_config"
+    }
+  },
+  "definitions": {
+    "files_list": {
+      "description": "List of files to be processed by this job.",
+      "type": "array",
+      "items": {
+        "minItems": 1,
+        "$ref": "#/definitions/file"
+      }
+    },
+    "file": {
+      "description": "A file to be processed as part of a job.",
+      "type": "object",
+      "required": [
+        "file_path"
+      ],
+      "properties": {
+        "file_path": {
+          "description": "Path to the file on the remote inbox.",
+          "type": "string"
+        },
+        "md5_checksum": {
+          "description": "The md5 checksum of the file. Used for validation purposes.",
+          "type": "string"
+        }
+      }
+    },
+    "job_config": {
+      "description": "Special configuration overrides to apply to this specific job.",
+      "type": "object",
+      "properties": {
+        "priority": {
+          "description": "Specify a different priority for this job.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

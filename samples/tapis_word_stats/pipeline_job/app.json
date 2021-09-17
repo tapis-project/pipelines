@@ -1,0 +1,33 @@
+{
+"id": "word_stats.pipelines.example.app",
+"version": "0.0.1",
+"description": "Dockerized app for Tapis Pipelines Word Count Example",
+"containerImage": "tapis/word_stats.pipelines",
+"appType": "FORK",
+"runtime": "DOCKER",
+"maxJobs": 30,
+"maxJobsPerUser": 30,
+"strictFileInputs": false,
+"jobAttributes": {
+  "description": "Compute basic stats on text file inputs",
+  "execSystemId": "word_stats.pipelines.example.exec",
+  "archiveOnAppError": false,
+  "parameterSet": {
+      "envVariables": [
+        {"key": "TAPIS_MANIFEST_FILE_PATH"}
+      ]
+  },
+  "fileInputs": [
+    {
+      "targetPath": "manifest.json",
+      "meta": {
+          "name": "manifest",
+          "description": "The manifest file for this pipeline job",
+          "required": true
+        }
+    }
+  ],
+  "maxMinutes": 10,
+  "tags": [ "pipelines", "example", "word_stats" ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+        "id": "word_stats.pipelines.example.exec",
+        "defaultAuthnMethod": "PKI_KEYS",
+        "authnCredential": {
+            "privateKey": "",
+            "publicKey": ""
+
+        },
+        "canExec": true,
+        "description": "Exec system for Tapis Pipelines Word Count Example",
+        "effectiveUserId": "testuser2",
+        "enabled": true,
+        "host": "129.114.17.113",
+        "port": 22,
+        "rootDir": "/home/testuser2/pipelines",
+        "systemType": "LINUX",
+        "transferMethods": [
+            "SFTP"
+        ],
+        "useProxy": false,
+        "jobRuntimes": [{"runtimeType": "DOCKER", "version": "0.0.1d"}],
+        "jobWorkingDir": "jobs_workdirs"
+}
