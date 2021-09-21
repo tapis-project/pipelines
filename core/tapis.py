@@ -1,17 +1,21 @@
 """
 Module for interacting with the Tapis API on behalf of a pipeline.
 """
+import json
 import os
 import sys
 
 from tapipy.tapis import Tapis
-from config import parse_pipeline_config
+from config import parse_pipeline_config, parse_manifest_bytes
 from errors import *
 from meta import MetadataHelper
 
 # all manifest files must have a name that begins with the following string; this is how the pipelines software
 # recognizes manifest files from other kinds of input files:
 TAPIS_PIPELINE_MANIFEST_FILENAME_PREFIX = "tapis_pipeline_manifest"
+
+# the key used by the Meta helper class for an error
+META_ERROR_STATUS_KEY = 'error'
 
 
 class TapisPipelineClient(object):
@@ -23,69 +27,109 @@ class TapisPipelineClient(object):
         self.config_path = os.environ.get('TAPIS_PIPELINES_CONFIG_FILE_PATH', '/etc/tapis/pipeline_config.json')
         self.config = parse_pipeline_config(self.config_path)
         self.name = self.config.pipeline_name
-        # if we are using Tapis, go ahead and instantiate a Tapis object
-        if hasattr(self.config, 'tapis_config'):
+        # parse the tapis_config
+        try:
+            self.tapis_base_url =  self.config.tapis_config['base_url']
+        except KeyError:
+            raise PipelineConfigError("tapis_config provided but tbase_url missing.")
+        try:
+            self.tapis_username =  self.config.tapis_config['username']
+        except KeyError:
+            raise PipelineConfigError("tapis_config provided but username missing.")
+        # look for an access token in various places:
+        try:
+            self.access_token = self.config.tapis_config['access_token']
+        except KeyError:
             try:
-                self.tapis_base_url =  self.config.tapis_config['base_url']
-            except KeyError:
-                raise PipelineConfigError("tapis_config provided but tbase_url missing.")
-            try:
-                self.tapis_username =  self.config.tapis_config['username']
-            except KeyError:
-                raise PipelineConfigError("tapis_config provided but username missing.")
-            # look for an access token in various places:
-            try:
-                self.access_token = self.config.tapis_config['access_token']
+                self.access_token = os.environ['TAPIS_PIPELINES_ACCESS_TOKEN']
             except KeyError:
                 try:
-                    self.access_token = os.environ['TAPIS_PIPELINES_ACCESS_TOKEN']
+                    self.access_token = os.environ['_abaco_access_token']
                 except KeyError:
-                    try:
-                        self.access_token = os.environ['_abaco_access_token']
-                    except KeyError:
-                        self.access_token = None
-            # if we didn't get an access token, look for a password:
-            if not self.access_token:
-                try:
-                    self.tapis_password = self.config.tapis_config['password']
-                except Exception as e:
-                    raise PipelineConfigError("Could not find an Tapis access token or password. Exiting!")
-            else:
-                self.tapis_password = None
-            if self.access_token:
-                msg = f"Using the following config to instantiate the Tapis client. \n" \
-                      f"base_url: {self.tapis_base_url} \n" \
-                      f"username: {self.tapis_username} \n " \
-                      f"access_token: {self.access_token[:5]}...{self.access_token[-5:]}"
-            else:
-                msg = f"Using the following config to instantiate the Tapis client. \n" \
-                      f"base_url: {self.tapis_base_url} \n" \
-                      f"username: {self.tapis_username} \n " \
-                      f"password: {self.tapis_password[1]}..."
+                    self.access_token = None
+        # if we didn't get an access token, look for a password:
+        if not self.access_token:
+            try:
+                self.tapis_password = self.config.tapis_config['password']
+            except Exception as e:
+                raise PipelineConfigError("Could not find an Tapis access token or password. Exiting!")
+        else:
+            self.tapis_password = None
+        if self.access_token:
+            msg = f"Using the following config to instantiate the Tapis client. \n" \
+                  f"base_url: {self.tapis_base_url} \n" \
+                  f"username: {self.tapis_username} \n " \
+                  f"access_token: {self.access_token[:5]}...{self.access_token[-5:]}"
+        else:
+            msg = f"Using the following config to instantiate the Tapis client. \n" \
+                  f"base_url: {self.tapis_base_url} \n" \
+                  f"username: {self.tapis_username} \n " \
+                  f"password: {self.tapis_password[1]}..."
+        print(msg)
+        # instantiate the tapis client -----
+        if self.access_token:
+            try:
+                self.tapis_client = Tapis(base_url=self.tapis_base_url,
+                                          username=self.tapis_username,
+                                          access_token=self.access_token)
+            except Exception as e:
+                raise PipelineConfigError(f"Failed to instantiate the tapis client using an access token. "
+                                          f"Exception: {e}")
+        else:
+            try:
+                self.tapis_client = Tapis(base_url=self.tapis_base_url,
+                                          username=self.tapis_username,
+                                          password=self.tapis_password)
+            except Exception as e:
+                raise PipelineConfigError(f"Failed to instantiate the tapis client using a password. "
+                                          f"Exception: {e}")
+        # set up the tapis metadata helper config ---
+        # if the db name isn't provided, try to use "pipelines" as the db name..
+        self._tapis_meta_db = self.config.tapis_config.get('meta_db', 'pipelines')
+        # check to see if we have access to the db
+        try:
+            collections = self.tapis_client.meta.listCollectionNames(db=self._tapis_meta_db)
+        except Exception as e:
+            msg = f'Got exception trying to list collections on db: {self._tapis_meta_db}. ' \
+                  f'Does user {self.tapis_username} have access to the db in the Meta API? Exception: {e}'
             print(msg)
-            # instantiate the tapis client -----
-            if self.access_token:
-                try:
-                    self.tapis_client = Tapis(base_url=self.tapis_base_url,
-                                              username=self.tapis_username,
-                                              access_token=self.access_token)
-                except Exception as e:
-                    raise PipelineConfigError(f"Failed to instantiate the tapis client using an access token. "
-                                              f"Exception: {e}")
-            else:
-                try:
-                    self.tapis_client = Tapis(base_url=self.tapis_base_url,
-                                              username=self.tapis_username,
-                                              password=self.tapis_password)
-                except Exception as e:
-                    raise PipelineConfigError(f"Failed to instantiate the tapis client using a password. "
-                                              f"Exception: {e}")
-            # set up the tapis metadata helper conig
-            self._tapis_meta_db = ''
-            self._tapis_meta_collection = ''
+            sys.exit(1)
+        if type(collections) == bytes:
+            collections = json.loads(collections)
 
+        default_meta_collection = f'{self.tapis_username}.{self.name}'
+        self._tapis_meta_collection = self.config.tapis_config.get('meta_collection', default_meta_collection)
+        # if the collection does not already exist, try go create it:
+        if self._tapis_meta_collection not in collections:
+            try:
+                self.tapis_client.meta.createCollection(db=self._tapis_meta_collection,
+                                                        collection=self._tapis_meta_collection)
+            except Exception as e:
+                msg = f'Collection {self._tapis_meta_collection} did not exist and got error trying to created it. \n' \
+                      f'Existing collections: {collections},\n' \
+                      f'Exception: {e}'
+                print(msg)
+                sys.exit(1)
         # parse and check remote outbox
         self.remote_outbox = self.parse_remote_outbox_config()
+
+    def get_meta_helper(self, job_name):
+        """
+        Helper method to instantiate a MetaHelper instance for a specific job.
+        :param job_name:
+        :return:
+        """
+        try:
+            return MetadataHelper(tapis_client=self.tapis_client,
+                                  db=self._tapis_meta_db,
+                                  collection=self._tapis_meta_collection,
+                                  job_name=job_name)
+        except Exception as e:
+            # TODO -- need
+            msg = f'got exception trying to instantiate a MetadataHelper object for job: {job_name};\n' \
+                  f'Exception: {e}'
+            print(msg)
+            raise UnexpectedRuntimeError(msg)
 
     def parse_remote_outbox_config(self):
         """
@@ -146,30 +190,67 @@ class TapisPipelineClient(object):
         """
         Computes the job_id from a manifest file name. This is just the last part of the name, after the
         manifest prefex.
-        :param file_name:
+        :param file_name: (string) The name of the file
         :return:
         """
         return file_name[len(TAPIS_PIPELINE_MANIFEST_FILENAME_PREFIX):]
 
-    def validate_manifest_and_submit_job(self, manifest_file):
+    def validate_manifest(self, manifest_file):
         """
-        Determines if a manifest file is valid, and if it is, it submits a pipeline job to process the manifest file.
+        Determines if a manifest file is valid: downloads the raw bytes, strips newlines and converts to JSON, and then
+        validates against the manifest jsonschema.
         :param manifest_file: A tapis file object representing a manifest file.
+        :return: bool -- True indicates the manifest file was valid, fale indicates it was invalid.
+        """
+        # parse manifest file and determine what input files are associated with the manifest; check that all
+        # associated inputs files exist in the remote outbox.
+        try:
+            manifest_bytes = self.tapis_client.files.getContents(systemId=self.remote_outbox.system_id,
+                                                                 path=manifest_file.path)
+        except Exception as e:
+            # TODO -- we should probably try a certain number of times and then eventually give up on this manifest..
+            msg = f"Got exception trying to retrieve manifest file {manifest_file}; Exception: {e}"
+            print(msg)
+            m = self.get_meta_helper(self.get_job_id_from_manifest_name(manifest_file.name))
+            m.update(statuskey=META_ERROR_STATUS_KEY, additional_info={"debug_data": msg})
+            return False
+        # parse and validate the manifest bytestream
+        try:
+            manifest = parse_manifest_bytes(manifest_bytes)
+        except Exception as e:
+            msg = f"Got exception trying to deserialize the manifest file {manifest_file}; Exception: {e}"
+            print(msg)
+            m = self.get_meta_helper(self.get_job_id_from_manifest_name(manifest_file.name))
+            m.update(statuskey=META_ERROR_STATUS_KEY, additional_info={"debug_data": msg})
+            return False
+        # make sure every file listed in the manifest is on the remote system.
+        for f in manifest['files']:
+            path = f['file_path']
+            try:
+                self.tapis_client.files.listFiles(systemId=self.remote_outbox.system_id,
+                                                  path=path)
+            except Exception as e:
+                # the file either doesn't exist or there was some other problem, so we cannot process this manifest
+                # file.
+                msg = f'Error checking file at path: {path} in manifest file: {manifest_file.path}; exception: {e}'
+                print(msg)
+                m = self.get_meta_helper(self.get_job_id_from_manifest_name(manifest_file.name))
+                m.update(statuskey=META_ERROR_STATUS_KEY, additional_info={"debug_data": msg})
+                return False
+        return True
+
+    def submit_job_for_manifest(self, manifest_file):
+        """
+        Submit a
+        :param manifest_file:
         :return:
         """
-        # todo --
-        # 1) parse manifest file and determine what input files are associated with the manifest; check that all
-        # associated inputs files exist in the remote outbox.
-        # 2) submit tapis job or send message to tapis actor
-        # 3) update metadata
-
         # when submitting a job to process manifest file and associated inputs.
-        # 1) if remote outbox is of type tapis, the files will
-        #    still live on the remote outobox, so we use the remote outbox tapis:// URL for the files.
-        # 2) if the remote outbox is of type globus, the files will have been copied to the local inbox so we use
-        #    the local inbox tapis:// URL for the files.
+        if not self.remote_outbox.kind == 'tapis':
+            raise NotImplementedError(f"Currently only support kind 'tapis' for remote_outbox configs. "
+                                      f"Found: {self.config.remote_outbox['kind']}")
 
-        pass
+
 
     def check_for_completed_pipeline_jobs(self):
         """
@@ -217,14 +298,15 @@ def main():
     t = TapisPipelineClient()
     # step 1 -- look for new manifest files and submit new pipeline jobs
     new_manifest_files = t.check_for_new_manifest_files()
+    # for each new manifest, check if it is valid, and if it is, submit a new job for it
     for f in new_manifest_files:
-        t.validate_manifest_and_submit_job(f)
+        if t.validate_manifest(f):
+            t.submit_job_for_manifest(f)
     # step 2 -- check for completed pipeline jobs and update metadata accordingly
     completed_jobs = t.check_for_completed_pipeline_jobs()
     # step 3/4 -- for each completed job, copy the output files with the manifest to the remote inbox.
     for job in completed_jobs:
         t.copy_completed_job_outputs_to_remote_inbox(job)
-
 
 
 if __name__ == '__main__':

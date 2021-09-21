@@ -42,9 +42,29 @@ class Config(dict):
         self[key] = value
 
     @classmethod
+    def get_config_from_bytes(cls, b, schema):
+        """
+        Return a config object from a bytes object, b.
+        :param d:
+        :return:
+        """
+        try:
+            data = json.loads(b.decode('utf-8').replace('\n', ''))
+        except Exception as e:
+            msg = f'Could not load JSON from bytes: {b}; expcetion: {e}'
+            print(msg)
+            raise BaseTapisPipelinesError(msg)
+        try:
+            jsonschema.validate(instance=data, schema=schema)
+        except jsonschema.SchemaError as e:
+            msg = f'Config not valid; exception: {e}'
+            raise BaseTapisPipelinesError(msg)
+        return data
+
+    @classmethod
     def get_config_from_file(cls, path, schema):
         """
-        Reads service config from a JSON file at path, `path`
+        Reads config object from a JSON file at path, `path`
         :return:
         """
         if os.path.exists(path):
@@ -73,11 +93,24 @@ def parse_manifest_file(path_to_manifest):
     """
     Parses the manifest.json file and returns a python object representing the manifest contents, if successful, and
     raises a ManifestFormatError if validation fails.
-    :param path_to_manifest:
+    :param path_to_manifest: string file path to manifest file.
     :return:
     """
     try:
         return Config(Config.get_config_from_file(path_to_manifest, manifest_schema))
+    except BaseTapisPipelinesError as e:
+        raise ManifestFormatError(e.msg)
+
+
+def parse_manifest_bytes(manifest_bytes):
+    """
+    Parses a manifest bytestream and returns a python object representing the manifest contents, if successful, and
+    aises a ManifestFormatError if validation fails.
+    :param manifest_bytes:
+    :return:
+    """
+    try:
+        return Config(Config.get_config_from_bytes(manifest_bytes, manifest_schema))
     except BaseTapisPipelinesError as e:
         raise ManifestFormatError(e.msg)
 

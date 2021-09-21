@@ -56,8 +56,6 @@ class MetadataHelper:
             self.logger.info('Created metadata record for {}.'.format(self.job_name))
             return True
 
-
-
     def get(self):
 
         '''

@@ -6,7 +6,8 @@
     "pipeline_name",
     "remote_inbox",
     "remote_outbox",
-    "pipeline_job"
+    "pipeline_job",
+    "tapis_config"
   ],
 
   "properties": {
@@ -182,6 +183,15 @@
         "access_token": {
           "type": "string",
           "description": "An access token associated with the Tapis username. If no token is provided, the pipelines software look in the environment for an access token. First looks for a variable named TAPIS_PIPELINES_ACCESS_TOKEN and then for _abaco_access_token in case the pipelines software is running as an Abaco actor."
+        },
+        "meta_db": {
+          "type": "string",
+          "description": "The database to use when writing to the Meta API. If not provided, Tapis Pipelines will attempt to use a default, but providing the value explicitly is strongly encouraged. The tapis username provided in this config must have write access to this db."
+        },
+        "meta_collection":{
+          "type": "string",
+          "description": "The collection to use when writing to the Meta API. Each pipeline should write to its own collection. If not provided, Tapis Pipelines will attempt to use <username>.<pipeline_name>, but providing the value explicitly is strongly encouraged."
+
         }
       }
     }
