@@ -1,5 +1,5 @@
 {
-  "pipeline_name": "word_stats.pipelines.example",
+  "pipeline_name": "word_stats.pipelines.example2",
   "remote_inbox": {
     "kind": "tapis",
     "box_definition": {
@@ -17,13 +17,14 @@
   "pipeline_job": {
     "tapis_app_job": {
       "app_id": "word_stats.pipelines.example.app",
+      "app_version": "0.0.1",
       "manifest_input_name": "manifest"
     }
 
   },
   "tapis_config": {
-    "base_url": "https://tacc.tapis.io",
-    "username": "jstubbs",
+    "base_url": "https://dev.tapis.io",
+    "username": "testuser3",
     "access_token": "TODO"
   }
 }

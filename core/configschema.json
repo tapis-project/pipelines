@@ -124,12 +124,17 @@
       "type": "object",
       "required": [
         "app_id",
+        "app_version",
         "manifest_input_name"
       ],
       "properties": {
         "app_id": {
           "type": "string",
           "description": "The app id to use when submitting the job,"
+        },
+        "app_version": {
+          "type": "string",
+          "description": "The version of the app id to use when submitting the job,"
         },
         "manifest_input_name": {
           "type": "string",

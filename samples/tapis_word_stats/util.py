@@ -4,6 +4,9 @@ from tapipy.tapis import Tapis
 t = Tapis(base_url='https://dev.tapis.io', username='testuser3', password='testuser3')
 t.get_tokens()
 
+import os
+os.environ['TAPIS_PIPELINES_CONFIG_FILE_PATH'] = '/home/jstubbs/gits/pipelines/samples/tapis_word_stats/word_stats_pipeline_config.json'
+
 
 def register_systems():
     exec_sys = json.load(open('examples/tapis_exec_system.json', 'r'))
